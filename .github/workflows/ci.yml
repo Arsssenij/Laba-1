@@ -1,0 +1,37 @@
+name: CI Build
+
+on:
+  push:
+    branches:
+      - main  # Запуск при каждом коммите в ветку main
+  pull_request:
+    branches:
+      - main  # Запуск при создании pull request в ветку main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]  # Выбор ОС
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2  # Скачивание кода из вашего репозитория
+      
+    - name: Set up C++ Compiler
+      run: sudo apt-get install g++  # Установка компилятора на Ubuntu
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Build on Ubuntu
+      run: |
+        g++ -o HelloWorld main.cpp  # Компиляция на Ubuntu
+        ./HelloWorld
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Build on Windows
+      run: |
+        g++ -o HelloWorld main.cpp  # Компиляция на Windows
+        HelloWorld.exe
+      shell: cmd
+      if: matrix.os == 'windows-latest'
