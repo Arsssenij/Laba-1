@@ -3,35 +3,40 @@ name: CI Build
 on:
   push:
     branches:
-      - main  # Запуск при каждом коммите в ветку main
+      - main
   pull_request:
     branches:
-      - main  # Запуск при создании pull request в ветку main
+      - main
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]  # Выбор ОС
+        os: [ubuntu-latest, windows-latest]
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2  # Скачивание кода из вашего репозитория
-      
-    - name: Set up C++ Compiler
-      run: sudo apt-get install g++  # Установка компилятора на Ubuntu
+      uses: actions/checkout@v2
+
+    - name: Set up C++ Compiler on Ubuntu
+      run: sudo apt-get install g++
       if: matrix.os == 'ubuntu-latest'
 
     - name: Build on Ubuntu
       run: |
-        g++ -o HelloWorld main.cpp  # Компиляция на Ubuntu
+        g++ -o HelloWorld main.cpp
         ./HelloWorld
       if: matrix.os == 'ubuntu-latest'
 
+    - name: Set up MinGW on Windows
+      run: |
+        choco install mingw
+      if: matrix.os == 'windows-latest'
+
     - name: Build on Windows
       run: |
-        g++ -o HelloWorld main.cpp  # Компиляция на Windows
-        HelloWorld.exe
+        g++ -o HelloWorld main.cpp
+        ./HelloWorld.exe
       shell: cmd
       if: matrix.os == 'windows-latest'
