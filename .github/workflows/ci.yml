@@ -8,17 +8,43 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    permissions: write-all
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
-      - run: cmake . -DPATCH_VERSION=${{ github.run_number }}
-      - run: cmake --build .
-      - run: cmake --build . --target test
-      - run: cmake --build . --target package
+
+      # Сборка на Ubuntu (Linux)
+      - name: Install dependencies on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
+
+      - name: Build on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cmake . -DPATCH_VERSION=${{ github.run_number }}
+          cmake --build .
+          cmake --build . --target test
+          cmake --build . --target package
+
+      # Сборка на Windows
+      - name: Install dependencies on Windows
+        if: matrix.os == 'windows-latest'
+        run: choco install cmake
+
+      - name: Build on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          cmake . -G "MinGW Makefiles" -DPATCH_VERSION=${{ github.run_number }}
+          cmake --build .
+          cmake --build . --target test
+          cmake --build . --target package
+
+      # Создание релиза
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -29,8 +55,10 @@ jobs:
           release_name: Release ${{ github.run_number }}
           draft: false
           prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset
+
+      # Загрузка релизных артефактов для Ubuntu
+      - name: Upload Release Asset (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,3 +67,15 @@ jobs:
           asset_path: ./helloworld-0.0.${{ github.run_number }}-Linux.deb
           asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
+
+      # Загрузка релизных артефактов для Windows
+      - name: Upload Release Asset (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./helloworld-0.0.${{ github.run_number }}-Windows.exe
+          asset_name: helloworld-0.0.${{ github.run_number }}-Windows.exe
+          asset_content_type: application/octet-stream
