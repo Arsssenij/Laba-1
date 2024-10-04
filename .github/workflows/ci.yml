@@ -1,4 +1,4 @@
-name: 'C++ CI'
+name: C++ CI
 
 on:
   push:
@@ -13,52 +13,47 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
+    permissions:
+      contents: write  # Права на запись в репозиторий
+      id-token: write   # Права для создания релиза
 
-      # Сборка на Ubuntu (Linux)
-      - name: Install dependencies on Ubuntu
-        if: matrix.os == 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up CMake
+        run: sudo apt-get install cmake -y  # Установка CMake для Linux
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
 
-      - name: Build on Ubuntu
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+
+      - name: Build with CMake
         run: |
           cmake . -DPATCH_VERSION=${{ github.run_number }}
           cmake --build .
-          cmake --build . --target test
-          cmake --build . --target package
 
-      # Сборка на Windows
-      - name: Install dependencies on Windows
-        if: matrix.os == 'windows-latest'
-        run: choco install cmake
+      - name: Run tests
+        run: cmake --build . --target test
 
-      - name: Build on Windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          cmake . -G "MinGW Makefiles" -DPATCH_VERSION=${{ github.run_number }}
-          cmake --build .
-          cmake --build . --target test
-          cmake --build . --target package
-
-      # Создание релиза
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.run_number }}
+          tag_name: v${{ github.run_number }}
           release_name: Release ${{ github.run_number }}
           draft: false
           prerelease: false
 
-      # Загрузка релизных артефактов для Ubuntu
-      - name: Upload Release Asset (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Upload Release Asset
+        id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,9 +63,9 @@ jobs:
           asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 
-      # Загрузка релизных артефактов для Windows
-      - name: Upload Release Asset (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Upload Windows Asset
+        id: upload-windows-asset
+        if: runner.os == 'Windows'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
