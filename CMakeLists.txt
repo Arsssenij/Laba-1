@@ -13,27 +13,34 @@ add_executable(helloworld_cli main.cpp)
 add_library(helloworld lib.cpp)
 add_executable(test_version test_version.cpp)
 
+# Устанавливаем стандарт C++14 для всех целей и включаем строгие требования
 set_target_properties(helloworld_cli helloworld test_version PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED ON
 )
+# Указываем путь к сгенерированному заголовочному файлу
 target_include_directories(helloworld
     PRIVATE "${CMAKE_BINARY_DIR}"
 )
+# Настройки для тестов: использование динамической линковки Boost
 set_target_properties(test_version PROPERTIES
     COMPILE_DEFINITIONS BOOST_TEST_DYN_LINK
     INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR}
 )
 
+# Связываем исполняемый файл helloworld_cli с библиотекой helloworld
 target_link_libraries(helloworld_cli PRIVATE
     helloworld
 )
+# Связываем тестовый файл с библиотекой Boost и helloworld
 target_link_libraries(test_version
     ${Boost_LIBRARIES}
     helloworld
 )
 
+# Устанавливаем флаги компилятора в зависимости от системы:
 if (MSVC)
+    # Для Visual Studio: максимальные предупреждения (/W4)
     target_compile_options(helloworld_cli PRIVATE
         /W4
     )
@@ -44,6 +51,7 @@ if (MSVC)
         /W4
     )
 else ()
+    # Для GCC/Clang: включаем все предупреждения и педантичность
     target_compile_options(helloworld_cli PRIVATE
         -Wall -Wextra -pedantic -Werror
     )
@@ -57,6 +65,7 @@ endif()
 
 
 
+# Устанавливаем helloworld_cli в каталог bin при инсталляции
 install(TARGETS helloworld_cli RUNTIME DESTINATION bin)
 
 # Установки для CPack
@@ -85,8 +94,11 @@ set(CPACK_PACKAGE_NAME "helloworld")
 # Добавляем CPack
 include(CPack)
 
+# Добавляем контактные данные для пакета
 set(CPACK_PACKAGE_CONTACT example@example.com)
 
+# Включаем поддержку модульного тестирования
 enable_testing()
 
+# Добавляем тест test_version, который будет выполнен при запуске тестов
 add_test(test_version test_version)
