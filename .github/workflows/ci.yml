@@ -3,129 +3,129 @@ name: Build and Release for Linux and macOS
 on:
   push:
     branches:
-      - main  # или другая ветка, при пуше в которую будет триггериться workflow
+      - main  # Ветка, при пуше в которую будет запускаться workflow
 
 jobs:
   # Workflow для сборки и релиза на macOS
   build-macos:
-    runs-on: macos-latest
-    permissions: write-all
+    runs-on: macos-latest  # Указываем, что сборка выполняется на macOS
+    permissions: write-all  # Разрешения для записи (используются для создания релизов и загрузки артефактов)
     steps:
-      # Чекаут кода
+      # Чекаут кода из репозитория
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: true  # Также чекаутим подмодули, если они есть
 
-      # Установка зависимостей для macOS
+      # Установка зависимостей для macOS через Homebrew
       - name: Install dependencies
-        run: brew update && brew install boost
+        run: brew update && brew install boost  # Устанавливаем Boost, требуемый для сборки проекта
 
-      # Генерация сборочных файлов
+      # Конфигурация проекта с указанием версии (PATCH_VERSION)
       - name: Configure project
-        run: cmake . -DPATCH_VERSION=${{ github.run_number }}
+        run: cmake . -DPATCH_VERSION=${{ github.run_number }}  # Передаём номер сборки как PATCH_VERSION
 
-      # Компиляция проекта
+      # Сборка проекта
       - name: Build project
-        run: cmake --build .
+        run: cmake --build .  # Запускаем процесс сборки
 
       # Запуск тестов
       - name: Run tests
-        run: cmake --build . --target test
+        run: cmake --build . --target test  # Запускаем цель тестирования, если она существует
 
-      # Создание пакета для macOS
+      # Упаковка проекта для macOS
       - name: Package for macOS
-        run: cmake --build . --target package
+        run: cmake --build . --target package  # Создаём установочный пакет
 
-      # Проверка на существование тега перед созданием релиза
+      # Проверка на наличие уже существующего тега для данной версии
       - name: Check if tag exists
         run: |
           if git rev-parse "refs/tags/v${{ github.run_number }}-macos" >/dev/null 2>&1; then
             echo "Tag exists for macOS. Exiting..."
-            exit 0
+            exit 0  # Выходим, если тег для macOS уже существует
           fi
 
-      # Создание релиза для macOS
+      # Создание релиза на GitHub для macOS
       - name: Create Release for macOS
         id: create_release_macos
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Используем токен для создания релиза
         with:
-          tag_name: v${{ github.run_number }}-macos
-          release_name: Release ${{ github.run_number }} for macOS
+          tag_name: v${{ github.run_number }}-macos  # Название тега для релиза
+          release_name: Release ${{ github.run_number }} for macOS  # Название релиза
           draft: false
           prerelease: false
 
-      # Загрузка пакета в релиз для macOS
+      # Загрузка собранного пакета в релиз на GitHub
       - name: Upload macOS Release Asset
         id: upload_release_asset_macos
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Токен для загрузки артефакта
         with:
-          upload_url: ${{ steps.create_release_macos.outputs.upload_url }}
-          asset_path: ./helloworld-0.0.${{ github.run_number }}-macOS.pkg
-          asset_name: helloworld-0.0.${{ github.run_number }}-macOS.pkg
-          asset_content_type: application/octet-stream
+          upload_url: ${{ steps.create_release_macos.outputs.upload_url }}  # URL для загрузки артефакта
+          asset_path: ./helloworld-0.0.${{ github.run_number }}-macOS.pkg  # Путь к пакету
+          asset_name: helloworld-0.0.${{ github.run_number }}-macOS.pkg  # Имя файла пакета
+          asset_content_type: application/octet-stream  # MIME-тип файла
 
   # Workflow для сборки и релиза на Linux
   build-linux:
-    runs-on: ubuntu-latest
-    permissions: write-all
+    runs-on: ubuntu-latest  # Указываем, что сборка выполняется на Ubuntu
+    permissions: write-all  # Разрешения для записи (для релизов и загрузки артефактов)
     steps:
-      # Чекаут кода
+      # Чекаут кода из репозитория
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: true  # Также чекаутим подмодули
 
-      # Установка зависимостей для Linux
+      # Установка зависимостей для Linux через apt-get
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libboost-test-dev
+        run: sudo apt-get update && sudo apt-get install -y libboost-test-dev  # Устанавливаем Boost для тестирования
 
-      # Генерация сборочных файлов
+      # Конфигурация проекта для Linux
       - name: Configure project
-        run: cmake . -DPATCH_VERSION=${{ github.run_number }}
+        run: cmake . -DPATCH_VERSION=${{ github.run_number }}  # Устанавливаем PATCH_VERSION
 
-      # Компиляция проекта
+      # Сборка проекта
       - name: Build project
-        run: cmake --build .
+        run: cmake --build .  # Запускаем процесс сборки
 
       # Запуск тестов
       - name: Run tests
-        run: cmake --build . --target test
+        run: cmake --build . --target test  # Запускаем цель тестирования
 
-      # Создание пакета для Linux
+      # Упаковка проекта для Linux
       - name: Package for Linux
-        run: cmake --build . --target package
+        run: cmake --build . --target package  # Создаём DEB пакет
 
-      # Проверка на существование тега перед созданием релиза
+      # Проверка на наличие уже существующего тега для данной версии
       - name: Check if tag exists
         run: |
           if git rev-parse "refs/tags/v${{ github.run_number }}-linux" >/dev/null 2>&1; then
             echo "Tag exists for Linux. Exiting..."
-            exit 0
+            exit 0  # Выходим, если тег уже существует
           fi
 
-      # Создание релиза для Linux
+      # Создание релиза на GitHub для Linux
       - name: Create Release for Linux
         id: create_release_linux
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Используем токен для создания релиза
         with:
-          tag_name: v${{ github.run_number }}-linux
-          release_name: Release ${{ github.run_number }} for Linux
+          tag_name: v${{ github.run_number }}-linux  # Название тега для релиза
+          release_name: Release ${{ github.run_number }} for Linux  # Название релиза
           draft: false
           prerelease: false
 
-      # Загрузка пакета в релиз для Linux
+      # Загрузка собранного пакета в релиз на GitHub
       - name: Upload Linux Release Asset
         id: upload_release_asset_linux
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Токен для загрузки артефакта
         with:
-          upload_url: ${{ steps.create_release_linux.outputs.upload_url }}
-          asset_path: ./helloworld-0.0.${{ github.run_number }}-Linux.deb
-          asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
-          asset_content_type: application/vnd.debian.binary-package
+          upload_url: ${{ steps.create_release_linux.outputs.upload_url }}  # URL для загрузки артефакта
+          asset_path: ./helloworld-0.0.${{ github.run_number }}-Linux.deb  # Путь к пакету
+          asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb  # Имя файла пакета
+          asset_content_type: application/vnd.debian.binary-package  # MIME-тип файла
